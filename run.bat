@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title Atractor Clima
+title Atractor Maquina
 cd /d "%~dp0"
 
 where node >nul 2>nul
@@ -30,7 +30,7 @@ if exist "%LocalAppData%\Google\Chrome\Application\chrome.exe" set "CHROME_PATH=
 set "ABRIR_NAVEGADOR=1"
 
 echo.
-echo  Iniciando Atractor Clima...
+echo  Iniciando Atractor Maquina...
 echo.
 node server.js
 pause

@@ -614,7 +614,7 @@ server.on("error", (err) => {
 
 server.listen(PORT, () => {
   console.log("");
-  console.log("=== ATRACTOR CLIMA - Editor de Efectos Visuales ===");
+  console.log("=== ATRACTOR MAQUINA - Lo que ve la maquina (YOLO) ===");
   console.log("Panel de control:  " + PANEL_URL);
   console.log("Salida visual:     http://localhost:" + PORT + "/output.html");
   console.log("(Para cerrar: cerrá esta ventana o apretá Ctrl + C)");
