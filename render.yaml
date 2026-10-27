@@ -1,8 +1,8 @@
-# Configuración para publicar Atractor Clima en Render (render.com).
+# Configuración para publicar Atractor Máquina en Render (render.com).
 # En Render: New → Blueprint → elegí este repositorio. Te va a pedir PANEL_PASSWORD.
 services:
   - type: web
-    name: atractor-clima
+    name: atractor-maquina
     runtime: node
     plan: free
     buildCommand: npm install
