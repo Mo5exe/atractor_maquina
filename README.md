@@ -15,6 +15,8 @@ Todo lo de Atractor Clima sigue igual (clima, palabras, música, multitouch, mul
    tarda unos segundos en cargar el modelo. En el panel, debajo de la cámara, dice qué ve
    la máquina: "La máquina ve: persona 87% · planta 54%".
 3. En la capa se ajusta:
+   - **Ojo de la máquina**: rápido (YOLOX-nano), intermedio (YOLOX-tiny) o preciso
+     (YOLOX-s). El preciso ve más y duda menos, pero es más lento y tarda más en cargar.
    - **Confianza mínima**: debajo de ese número la máquina "no ve" nada.
    - **Recuadros** y **porcentaje**: mostrarlos o no.
    - **Temblor cuando duda**, **tamaño de la palabra**.
@@ -30,7 +32,7 @@ Reconoce las 80 clases del dataset COCO (en castellano): persona, perro, gato, p
 planta, florero, silla, sillón, mesa, taza, copa, botella, libro, celular, notebook,
 televisor, reloj, paraguas, mochila, auto, colectivo, bicicleta…
 
-El modelo es **YOLOX-nano** (Megvii, licencia Apache 2.0), corre en el navegador con
+Los modelos son **YOLOX** nano, tiny y s (Megvii, licencia Apache 2.0), corre en el navegador con
 ONNX Runtime Web y no manda imágenes a ningún lado: todo se procesa en la compu.
 
 ---

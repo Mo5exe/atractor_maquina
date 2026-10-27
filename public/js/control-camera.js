@@ -68,6 +68,10 @@ const detector = new ObjectDetector({
   getMirror: () => window.appSettings.mirror !== false,
   getMinConf: machineMinConf,
   isWanted: machineWanted,
+  getModel: () => {
+    const l = (window.appLayers || []).find((x) => x.type === "machine" && x.enabled);
+    return (l && l.params && l.params.eye) || "fast";
+  },
   onStatus: (text, kind) => { if (objStatus) { objStatus.textContent = text; objStatus.className = "status " + (kind || "info"); } },
   onObjects: (objects) => {
     if (objects.length || !lastObjEmpty) socket.volatile.emit("objects", { objects });

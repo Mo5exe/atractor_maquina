@@ -14,8 +14,12 @@
  * El modelo YOLOX es de Megvii (licencia Apache 2.0) y está en /yolo/yolox_nano.onnx.
  */
 
-const MODEL_URL = "/yolo/yolox_nano.onnx";
-const SIZE = 416;
+// "Ojos" de la máquina: más grande = ve mejor, pero más lento.
+export const MODELS = {
+  fast: { url: "/yolo/yolox_nano.onnx", size: 416, label: "rápido" },
+  medium: { url: "/yolo/yolox_tiny.onnx", size: 416, label: "intermedio" },
+  precise: { url: "/yolo/yolox_s.onnx", size: 640, label: "preciso" }
+};
 
 // Las 80 clases de COCO, en castellano (rioplatense).
 export const LABELS_ES = [
@@ -41,15 +45,17 @@ function loadOrt() {
   return ortPromise;
 }
 
-// Grilla de YOLOX para decodificar las 3549 salidas (strides 8, 16 y 32).
-const GRID = (() => {
+// Grilla de YOLOX para decodificar las salidas (strides 8, 16 y 32).
+const GRIDS = {};
+function gridFor(size) {
+  if (GRIDS[size]) return GRIDS[size];
   const gx = [], gy = [], st = [];
   for (const s of [8, 16, 32]) {
-    const n = SIZE / s;
+    const n = size / s;
     for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { gx.push(x); gy.push(y); st.push(s); }
   }
-  return { gx, gy, st, n: st.length };
-})();
+  return (GRIDS[size] = { gx, gy, st, n: st.length });
+}
 
 function iou(a, b) {
   const x1 = Math.max(a.x, b.x), y1 = Math.max(a.y, b.y);
@@ -64,6 +70,7 @@ export class ObjectDetector {
     this.getMirror = opts.getMirror || (() => true);
     this.getMinConf = opts.getMinConf || (() => 0.25);
     this.isWanted = opts.isWanted || (() => true);
+    this.getModel = opts.getModel || (() => "fast");
     this.onObjects = opts.onObjects || (() => {});
     this.onStatus = opts.onStatus || (() => {});
     this.session = null;
@@ -71,29 +78,40 @@ export class ObjectDetector {
     this.tracks = [];
     this.nextId = 1;
     this.canvas = document.createElement("canvas");
-    this.canvas.width = SIZE;
-    this.canvas.height = SIZE;
     this.ctx = this.canvas.getContext("2d", { willReadFrequently: true });
-    this.input = new Float32Array(3 * SIZE * SIZE);
+    this.modelKey = null;
+    this.loading = null;
     this._tick = this._tick.bind(this);
+  }
+
+  // Carga (o cambia) el modelo según el "ojo" elegido.
+  async _load(key) {
+    const m = MODELS[key] || MODELS.fast;
+    this.onStatus("Cargando YOLO " + m.label + " (lo que ve la máquina)…", "info");
+    const ort = await loadOrt();
+    this.ort = ort;
+    const session = await ort.InferenceSession.create(m.url, { executionProviders: ["wasm"] });
+    this.session = session;
+    this.modelKey = key;
+    this.size = m.size;
+    this.canvas.width = m.size;
+    this.canvas.height = m.size;
+    this.input = new Float32Array(3 * m.size * m.size);
+    this.tracks = [];
+    this.onStatus("YOLO " + m.label + " listo: la máquina está mirando.", "ok");
   }
 
   async start() {
     if (this.running) return true;
     this.running = true;
-    if (!this.session) {
-      try {
-        this.onStatus("Cargando YOLO (lo que ve la máquina)…", "info");
-        const ort = await loadOrt();
-        this.ort = ort;
-        this.session = await ort.InferenceSession.create(MODEL_URL, { executionProviders: ["wasm"] });
-        this.onStatus("YOLO listo: la máquina está mirando.", "ok");
-      } catch (err) {
-        console.error("No se pudo cargar YOLO", err);
-        this.onStatus("No se pudo cargar YOLO: " + (err && err.message ? err.message : err), "error");
-        this.running = false;
-        return false;
-      }
+    try {
+      const key = MODELS[this.getModel()] ? this.getModel() : "fast";
+      if (!this.session || this.modelKey !== key) await this._load(key);
+    } catch (err) {
+      console.error("No se pudo cargar YOLO", err);
+      this.onStatus("No se pudo cargar YOLO: " + (err && err.message ? err.message : err), "error");
+      this.running = false;
+      return false;
     }
     setTimeout(this._tick, 0);
     return true;
@@ -109,6 +127,10 @@ export class ObjectDetector {
     if (!this.running) return;
     const t0 = performance.now();
     let wait = 120;
+    const want = MODELS[this.getModel()] ? this.getModel() : "fast";
+    if (this.isWanted() && want !== this.modelKey) {
+      try { await this._load(want); } catch (err) { console.error(err); this.onStatus("No se pudo cargar ese YOLO.", "error"); }
+    }
     if (!this.isWanted()) {
       if (this.tracks.length) { this.tracks = []; this.onObjects([]); }
       wait = 500;
@@ -128,6 +150,8 @@ export class ObjectDetector {
 
   async _detect() {
     const v = this.video;
+    const SIZE = this.size;
+    const GRID = gridFor(SIZE);
     const W = v.videoWidth, H = v.videoHeight;
     const r = Math.min(SIZE / W, SIZE / H);
     const rw = Math.round(W * r), rh = Math.round(H * r);
@@ -188,6 +212,7 @@ export class ObjectDetector {
   // Color promedio del centro del objeto (lo que la cámara ve de esa cosa).
   _color(b) {
     const px = this.pixels;
+    const SIZE = this.size;
     let r = 0, g = 0, bl = 0, n = 0;
     const x0 = Math.max(0, Math.round(b[0] - b[2] * 0.25)), x1 = Math.min(SIZE - 1, Math.round(b[0] + b[2] * 0.25));
     const y0 = Math.max(0, Math.round(b[1] - b[3] * 0.25)), y1 = Math.min(SIZE - 1, Math.round(b[1] + b[3] * 0.25));

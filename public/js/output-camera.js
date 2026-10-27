@@ -55,6 +55,10 @@ if (params.get("camara") === "1" || params.get("camera") === "1") {
       return ls.length ? Math.min(...ls.map((l) => (l.params && l.params.minConf) || 0.3)) : 0.3;
     },
     isWanted: () => (window.appLayers || []).some((l) => l.type === "machine" && l.enabled),
+    getModel: () => {
+        const l = (window.appLayers || []).find((x) => x.type === "machine" && x.enabled);
+        return (l && l.params && l.params.eye) || "fast";
+      },
     onObjects: (objects) => { window.localCameraObjects = { objects, at: performance.now() }; }
   });
   tracker.start(params.get("deviceId") || undefined).then((ok) => { if (ok) detector.start(); });

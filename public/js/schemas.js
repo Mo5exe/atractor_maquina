@@ -265,6 +265,11 @@
       { key: "color2", label: "Segundo color", type: "color", default: "#ff3d8b" }
     ],
     machine: [
+      { key: "eye", label: "Ojo de la máquina", type: "select", default: "fast", options: [
+        { value: "fast", label: "Rápido (YOLOX-nano, 4 MB)" },
+        { value: "medium", label: "Intermedio (YOLOX-tiny, 20 MB)" },
+        { value: "precise", label: "Preciso, más lento (YOLOX-s, 36 MB)" }
+      ] },
       { key: "minConf", label: "Confianza mínima (debajo, la máquina no ve nada)", type: "range", min: 0.05, max: 0.9, step: 0.05, default: 0.3 },
       { key: "boxes", label: "Mostrar los recuadros", type: "checkbox", default: true },
       { key: "percent", label: "Mostrar el porcentaje", type: "checkbox", default: true },
