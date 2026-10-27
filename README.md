@@ -17,6 +17,10 @@ Todo lo de Atractor Clima sigue igual (clima, palabras, música, multitouch, mul
 3. En la capa se ajusta:
    - **Ojo de la máquina**: rápido (YOLOX-nano), intermedio (YOLOX-tiny) o preciso
      (YOLOX-s). El preciso ve más y duda menos, pero es más lento y tarda más en cargar.
+     Con **"601 cosas"** usa otro modelo (YOLOv8 entrenado con Open Images) que reconoce
+     mucho más: árbol, flor, rosa, girasol, planta de interior, maceta, hongo, lámpara,
+     cuadro, cortina, persiana, ventana, puerta, escalera, anteojos, calzado, jean,
+     campera, cara, mano, pelo, ojo, hombre, mujer, nene, nena, escultura, póster…
    - **Confianza mínima**: debajo de ese número la máquina "no ve" nada.
    - **Recuadros** y **porcentaje**: mostrarlos o no.
    - **Temblor cuando duda**, **tamaño de la palabra**.
@@ -32,8 +36,10 @@ Reconoce las 80 clases del dataset COCO (en castellano): persona, perro, gato, p
 planta, florero, silla, sillón, mesa, taza, copa, botella, libro, celular, notebook,
 televisor, reloj, paraguas, mochila, auto, colectivo, bicicleta…
 
-Los modelos son **YOLOX** nano, tiny y s (Megvii, licencia Apache 2.0), corre en el navegador con
-ONNX Runtime Web y no manda imágenes a ningún lado: todo se procesa en la compu.
+Los modelos son **YOLOX** nano, tiny y s (Megvii, licencia Apache 2.0) y **YOLOv8n/s
+Open Images V7** (Ultralytics, licencia AGPL-3.0: se pueden usar en este proyecto abierto;
+para un uso comercial cerrado hace falta la licencia de Ultralytics). Corren en el
+navegador con ONNX Runtime Web y no mandan imágenes a ningún lado: todo se procesa en la compu.
 
 ---
 

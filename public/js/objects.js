@@ -15,10 +15,13 @@
  */
 
 // "Ojos" de la máquina: más grande = ve mejor, pero más lento.
+// "yolox": 80 cosas (COCO). "v8": 601 cosas (Open Images V7, YOLOv8 de Ultralytics).
 export const MODELS = {
-  fast: { url: "/yolo/yolox_nano.onnx", size: 416, label: "rápido" },
-  medium: { url: "/yolo/yolox_tiny.onnx", size: 416, label: "intermedio" },
-  precise: { url: "/yolo/yolox_s.onnx", size: 640, label: "preciso" }
+  fast: { url: "/yolo/yolox_nano.onnx", size: 416, label: "rápido", kind: "yolox" },
+  medium: { url: "/yolo/yolox_tiny.onnx", size: 416, label: "intermedio", kind: "yolox" },
+  precise: { url: "/yolo/yolox_s.onnx", size: 640, label: "preciso", kind: "yolox" },
+  many: { url: "/yolo/yolov8n-oiv7.onnx", size: 640, label: "601 cosas", kind: "v8" },
+  manyPrecise: { url: "/yolo/yolov8s-oiv7.onnx", size: 640, label: "601 cosas, preciso", kind: "v8" }
 };
 
 // Las 80 clases de COCO, en castellano (rioplatense).
@@ -46,6 +49,8 @@ function loadOrt() {
 }
 
 // Grilla de YOLOX para decodificar las salidas (strides 8, 16 y 32).
+import { LABELS_OIV7 } from "./labels-oiv7.js";
+
 const GRIDS = {};
 function gridFor(size) {
   if (GRIDS[size]) return GRIDS[size];
@@ -93,6 +98,8 @@ export class ObjectDetector {
     const session = await ort.InferenceSession.create(m.url, { executionProviders: ["wasm"] });
     this.session = session;
     this.modelKey = key;
+    this.kind = m.kind;
+    this.labels = m.kind === "v8" ? LABELS_OIV7 : LABELS_ES;
     this.size = m.size;
     this.canvas.width = m.size;
     this.canvas.height = m.size;
@@ -163,17 +170,42 @@ export class ObjectDetector {
     this.pixels = px; // para sacar el color de cada objeto
     const plane = SIZE * SIZE;
     const inp = this.input;
-    for (let i = 0, p = 0; i < plane; i++, p += 4) {
-      inp[i] = px[p + 2];             // B
-      inp[plane + i] = px[p + 1];     // G
-      inp[2 * plane + i] = px[p];     // R
+    if (this.kind === "v8") {
+      // YOLOv8: RGB de 0 a 1
+      for (let i = 0, p = 0; i < plane; i++, p += 4) {
+        inp[i] = px[p] / 255;
+        inp[plane + i] = px[p + 1] / 255;
+        inp[2 * plane + i] = px[p + 2] / 255;
+      }
+    } else {
+      // YOLOX: BGR de 0 a 255
+      for (let i = 0, p = 0; i < plane; i++, p += 4) {
+        inp[i] = px[p + 2];
+        inp[plane + i] = px[p + 1];
+        inp[2 * plane + i] = px[p];
+      }
     }
     const tensor = new this.ort.Tensor("float32", inp, [1, 3, SIZE, SIZE]);
     const out = await this.session.run({ [this.session.inputNames[0]]: tensor });
-    const data = out[this.session.outputNames[0]].data; // [3549, 85]
+    const data = out[this.session.outputNames[0]].data;
     const minConf = this.getMinConf();
     const cand = [];
-    for (let i = 0; i < GRID.n; i++) {
+    if (this.kind === "v8") {
+      // YOLOv8: [4 + clases, N] → cx, cy, w, h en píxeles del cuadro y una nota por clase.
+      const dims = out[this.session.outputNames[0]].dims;
+      const C = dims[1] - 4, N = dims[2];
+      for (let i = 0; i < N; i++) {
+        let best = 0, cls = 0;
+        for (let k = 0; k < C; k++) {
+          const v = data[(4 + k) * N + i];
+          if (v > best) { best = v; cls = k; }
+        }
+        if (best < minConf) continue;
+        const cx = data[i], cy = data[N + i], bw = data[2 * N + i], bh = data[3 * N + i];
+        cand.push({ cls, conf: best, x: (cx - bw / 2) / rw, y: (cy - bh / 2) / rh, w: bw / rw, h: bh / rh, px: [cx, cy, bw, bh] });
+      }
+    }
+    for (let i = 0; this.kind !== "v8" && i < GRID.n; i++) {
       const o = i * 85;
       const obj = data[o + 4];
       if (obj < minConf * 0.5) continue;
@@ -260,6 +292,6 @@ export class ObjectDetector {
 
   _public(t) {
     const r = (v) => Math.round(v * 1000) / 1000;
-    return { id: t.id, cls: t.cls, label: LABELS_ES[t.cls] || "cosa", conf: r(t.conf), x: r(t.x), y: r(t.y), w: r(t.w), h: r(t.h), color: t.color };
+    return { id: t.id, cls: t.cls, label: (this.labels || LABELS_ES)[t.cls] || "cosa", conf: r(t.conf), x: r(t.x), y: r(t.y), w: r(t.w), h: r(t.h), color: t.color };
   }
 }

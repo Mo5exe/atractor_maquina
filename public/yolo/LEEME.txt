@@ -1,3 +1,7 @@
 yolox_nano.onnx, yolox_tiny.onnx, yolox_s.onnx — YOLOX, de Megvii (https://github.com/Megvii-BaseDetection/YOLOX)
 Licencia Apache 2.0 (https://www.apache.org/licenses/LICENSE-2.0).
 Detecta las 80 clases del dataset COCO. Se usa en la capa "Lo que ve la máquina".
+
+yolov8n-oiv7.onnx, yolov8s-oiv7.onnx — YOLOv8 de Ultralytics entrenado con Open Images V7
+(601 clases), exportado a ONNX. Licencia AGPL-3.0 (https://github.com/ultralytics/ultralytics).
+Los nombres en castellano están en public/js/labels-oiv7.js.
