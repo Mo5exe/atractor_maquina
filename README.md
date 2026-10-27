@@ -1,3 +1,38 @@
+# Atractor Máquina — lo que ve la máquina
+
+Versión de Atractor Clima con **YOLO**: la cámara no sólo sigue la mano, también reconoce
+las cosas que hay en la sala (personas, plantas, sillas, tazas, celulares…) y las nombra
+con su **confianza** ("planta 54%"). Cuanto más segura está la máquina, más grande y
+sólida es la palabra; cuando duda, queda transparente y tiembla. De las cosas y de las
+letras salen partículas, y cuando la máquina deja de ver algo, su palabra se deshace.
+
+Todo lo de Atractor Clima sigue igual (clima, palabras, música, multitouch, multijugador).
+
+## Lo que ve la máquina (YOLO)
+
+1. Agregá la capa **"Lo que ve la máquina (YOLO)"**.
+2. Prendé la cámara (en el panel o con **"Abrir salida con cámara"**). La primera vez
+   tarda unos segundos en cargar el modelo. En el panel, debajo de la cámara, dice qué ve
+   la máquina: "La máquina ve: persona 87% · planta 54%".
+3. En la capa se ajusta:
+   - **Confianza mínima**: debajo de ese número la máquina "no ve" nada.
+   - **Recuadros** y **porcentaje**: mostrarlos o no.
+   - **Temblor cuando duda**, **tamaño de la palabra**.
+   - **Partículas que salen de las cosas** y **de la palabra**, tamaño, velocidad y vida.
+   - **Color de las partículas**: el color real de la cosa (lo que ve la cámara), un solo
+     color, o según la confianza (color de la duda → color de la seguridad).
+4. En la tarjeta de la cámara: **"Las cosas que ve la máquina también atraen"**: cada
+   cosa detectada atrae a las otras capas como si fuera una mano.
+
+Reconoce las 80 clases del dataset COCO (en castellano): persona, perro, gato, pájaro,
+planta, florero, silla, sillón, mesa, taza, copa, botella, libro, celular, notebook,
+televisor, reloj, paraguas, mochila, auto, colectivo, bicicleta…
+
+El modelo es **YOLOX-nano** (Megvii, licencia Apache 2.0), corre en el navegador con
+ONNX Runtime Web y no manda imágenes a ningún lado: todo se procesa en la compu.
+
+---
+
 # Atractor Clima
 
 Editor de efectos visuales en tiempo real para proyectar en una pared, **vinculado al clima**.

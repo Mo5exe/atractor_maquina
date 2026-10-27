@@ -119,7 +119,7 @@ function mount(app) {
 const ADMIN_EVENTS = new Set([
   "add-layer", "remove-layer", "toggle-layer", "reorder-layer", "update-param", "clear-layers",
   "update-origin", "rotate-layer", "update-setting", "refresh-trends", "refresh-weather", "search-city",
-  "hands", "save-preset", "load-preset", "rename-preset", "delete-preset", "delete-image", "delete-animation"
+  "hands", "objects", "save-preset", "load-preset", "rename-preset", "delete-preset", "delete-image", "delete-animation"
 ]);
 
 function guardSocket(socket) {

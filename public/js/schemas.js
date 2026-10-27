@@ -264,6 +264,28 @@
       { key: "color", label: "Color", type: "color", default: "#5cc8ff" },
       { key: "color2", label: "Segundo color", type: "color", default: "#ff3d8b" }
     ],
+    machine: [
+      { key: "minConf", label: "Confianza mínima (debajo, la máquina no ve nada)", type: "range", min: 0.05, max: 0.9, step: 0.05, default: 0.3 },
+      { key: "boxes", label: "Mostrar los recuadros", type: "checkbox", default: true },
+      { key: "percent", label: "Mostrar el porcentaje", type: "checkbox", default: true },
+      { key: "labelSize", label: "Tamaño de la palabra", type: "range", min: 8, max: 120, step: 1, default: 34 },
+      { key: "doubt", label: "Temblor cuando duda", type: "range", min: 0, max: 3, step: 0.05, default: 1 },
+      { key: "particles", label: "Partículas que salen de las cosas", type: "range", min: 0, max: 400, step: 5, default: 140 },
+      { key: "wordParticles", label: "Partículas que salen de la palabra", type: "range", min: 0, max: 400, step: 5, default: 60 },
+      { key: "particleSize", label: "Tamaño de partícula", type: "range", min: 0.5, max: 12, step: 0.5, default: 3.5 },
+      { key: "speed", label: "Velocidad de las partículas", type: "range", min: 0, max: 6, step: 0.1, default: 1.2 },
+      { key: "life", label: "Vida de las partículas (s)", type: "range", min: 0.3, max: 8, step: 0.1, default: 2.2 },
+      { key: "colorMode", label: "Color de las partículas", type: "select", default: "object", options: [
+        { value: "object", label: "El color real de la cosa (cámara)" },
+        { value: "single", label: "El color de abajo" },
+        { value: "confidence", label: "Según la confianza (duda → seguridad)" }
+      ] },
+      ATTRACT,
+      CLIMATE,
+      MUSIC,
+      { key: "color", label: "Color", type: "color", default: "#39ff9c" },
+      { key: "color2", label: "Color de la duda", type: "color", default: "#ff3d8b" }
+    ],
     stripesH: [
       { key: "count", label: "Cantidad de rayas", type: "range", min: 1, max: 80, step: 1, default: 14 },
       { key: "minWidth", label: "Grosor mínimo", type: "range", min: 0.5, max: 200, step: 0.5, default: 2 },
@@ -301,7 +323,8 @@
     glitch: "Glitch",
     animations: "Animaciones",
     stripesV: "Rayas verticales",
-    stripesH: "Rayas horizontales"
+    stripesH: "Rayas horizontales",
+    machine: "Lo que ve la máquina (YOLO)"
   };
 
   // Ajustes globales de la escena (no pertenecen a una capa).
@@ -398,6 +421,9 @@
     mirror: true,           // espejar la cámara (como un espejo)
     showCursor: true,       // dibujar un círculo donde está la mano
     maxHands: 4,            // cuántas manos detecta la cámara a la vez (1 a 6)
+
+    // --- Lo que ve la máquina (YOLO) ---
+    objectsAttract: false,  // las cosas que ve la máquina también atraen (como una mano)
 
     // --- Multijugador (cada persona con su celular) ---
     players: true,          // dejar que se sumen celulares (página /mano.html)

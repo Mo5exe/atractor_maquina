@@ -31,6 +31,7 @@
   socket.on("state", (state) => {
     currentState = state || { layers: [], settings: {} };
     window.appSettings = currentState.settings || {};
+    window.appLayers = currentState.layers || [];
     syncAudio(window.appSettings);
     const activeIds = new Set(currentState.layers.map((l) => l.id));
     for (const id of Array.from(instances.keys())) {
@@ -199,6 +200,21 @@
     cameraHandsAt = performance.now();
   });
 
+  // --- Lo que ve la máquina (YOLO): objetos que manda la cámara del panel ---
+  let remoteObjects = [];
+  let remoteObjectsAt = 0;
+  socket.on("objects", (payload) => {
+    remoteObjects = (payload && Array.isArray(payload.objects)) ? payload.objects : [];
+    remoteObjectsAt = performance.now();
+  });
+  function screenObjects(w, h) {
+    const local = window.localCameraObjects;
+    let list = null;
+    if (local && performance.now() - local.at < 800) list = local.objects;
+    else if (performance.now() - remoteObjectsAt < 800) list = remoteObjects;
+    return (list || []).map((o) => Object.assign({}, o, { x: o.x * w, y: o.y * h, w: o.w * w, h: o.h * h }));
+  }
+
   // --- Multijugador: los celulares que se sumaron con el QR ---
   let remotePlayers = [];
   socket.on("players", (list) => { remotePlayers = Array.isArray(list) ? list : []; });
@@ -324,7 +340,10 @@
     const w = canvas.width;
     const h = canvas.height;
     const settings = currentState.settings || {};
+    const objects = screenObjects(w, h);
     const hands = screenHands(w, h);
+    // Opcional: cada cosa que ve la máquina también atrae, como una mano.
+    if (settings.objectsAttract) objects.forEach((o) => hands.push({ id: "o" + o.id, x: o.x + o.w / 2, y: o.y + o.h / 2, object: true }));
     const diag = Math.hypot(w, h);
     const radius = ((settings.attractorRadius != null ? settings.attractorRadius : 60) / 100) * diag;
     const globalStrength = settings.attractorStrength != null ? settings.attractorStrength : 0.8;
@@ -359,7 +378,11 @@
         weather: weatherNow,
         climate,
         tint: climateColorAmount * climate,
-        audio: musicFor(layer)
+        audio: musicFor(layer),
+        objects: objects.map((o) => {
+          const c = toLayerSpace({ x: o.x + o.w / 2, y: o.y + o.h / 2 }, w, h, transform);
+          return Object.assign({}, o, { x: c.x - o.w / 2, y: c.y - o.h / 2 });
+        })
       };
       try {
         inst.update(dt, t, w, h, layer.params, env);
@@ -384,7 +407,7 @@
     }
     drawFog(w, h, settings);
     // Los jugadores con celular siempre ven su círculo (así saben dónde están).
-    drawCursor(settings.showCursor !== false ? hands : hands.filter((hh) => hh.color));
+    drawCursor(settings.showCursor !== false ? hands.filter((hh) => !hh.object) : hands.filter((hh) => hh.color));
     updateQr(settings);
 
     requestAnimationFrame(loop);

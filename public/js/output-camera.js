@@ -7,6 +7,7 @@
  * Tecla C: mostrar / ocultar una vista chica de la cámara.
  */
 import { HandTracker } from "./hands.js";
+import { ObjectDetector } from "./objects.js";
 
 const params = new URLSearchParams(location.search);
 if (params.get("camara") === "1" || params.get("camera") === "1") {
@@ -44,5 +45,17 @@ if (params.get("camara") === "1" || params.get("camera") === "1") {
       window.localCameraHands = { hands, at: performance.now() };
     }
   });
-  tracker.start(params.get("deviceId") || undefined);
+  // Lo que ve la máquina (YOLO), con el mismo video de la cámara.
+  window.localCameraObjects = { objects: [], at: 0 };
+  const detector = new ObjectDetector({
+    video: tracker.video,
+    getMirror: () => !window.appSettings || window.appSettings.mirror !== false,
+    getMinConf: () => {
+      const ls = (window.appLayers || []).filter((l) => l.type === "machine" && l.enabled);
+      return ls.length ? Math.min(...ls.map((l) => (l.params && l.params.minConf) || 0.3)) : 0.3;
+    },
+    isWanted: () => (window.appLayers || []).some((l) => l.type === "machine" && l.enabled),
+    onObjects: (objects) => { window.localCameraObjects = { objects, at: performance.now() }; }
+  });
+  tracker.start(params.get("deviceId") || undefined).then((ok) => { if (ok) detector.start(); });
 }

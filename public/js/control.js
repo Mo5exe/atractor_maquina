@@ -105,6 +105,7 @@
   });
   $("maxHandsRange").addEventListener("change", (e) => e.target.blur());
   $("cursorChk").addEventListener("change", (e) => setSetting("showCursor", e.target.checked));
+  $("objectsAttractChk").addEventListener("change", (e) => setSetting("objectsAttract", e.target.checked));
 
   // --- Multijugador ---
   $("playersChk").addEventListener("change", (e) => setSetting("players", e.target.checked));
@@ -191,6 +192,7 @@
     setIfIdle($("maxHandsRange"), "value", s.maxHands || 4);
     $("maxHandsValue").textContent = s.maxHands || 4;
     $("cursorChk").checked = !!s.showCursor;
+    $("objectsAttractChk").checked = !!s.objectsAttract;
     $("playersChk").checked = s.players !== false;
     $("playerWordsChk").checked = s.playerWords !== false;
     $("showQrChk").checked = !!s.showQR;
@@ -336,6 +338,7 @@
   // ------------------------------------------------------------------ capas
   socket.on("state", (state) => {
     currentState = state;
+    window.appLayers = state.layers || [];
     renderSettings(state.settings || {});
     const key = state.layers.map((l) => l.id + ":" + l.type + ":" + l.enabled).join("|");
     if (key !== structureKey) {

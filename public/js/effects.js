@@ -1942,6 +1942,187 @@ class AnimationsEffect {
 }
 
 // ---------------------------------------------------------------------------
+// LO QUE VE LA MÁQUINA — YOLO detecta cosas con la cámara. Cada cosa se marca
+// con su nombre y su "confianza" ("planta 54%"): cuanto más segura está la
+// máquina, más grande y sólida es la palabra; cuando duda, queda transparente
+// y tiembla. De las cosas y de las palabras salen partículas; cuando la
+// máquina deja de ver algo, su palabra se deshace en partículas.
+// ---------------------------------------------------------------------------
+const GLYPH_CACHE = new Map();
+// Puntos donde hay "tinta" en una palabra (para que las partículas salgan de las letras).
+function glyphPoints(text, size) {
+  const key = text + "|" + size;
+  let pts = GLYPH_CACHE.get(key);
+  if (pts) return pts;
+  const c = document.createElement("canvas");
+  const g = c.getContext("2d", { willReadFrequently: true });
+  const font = "600 " + size + "px 'Segoe UI', Roboto, Arial, sans-serif";
+  g.font = font;
+  const tw = Math.ceil(g.measureText(text).width) + 4;
+  c.width = tw; c.height = Math.ceil(size * 1.3);
+  g.font = font;
+  g.textBaseline = "top";
+  g.fillStyle = "#fff";
+  g.fillText(text, 2, 2);
+  const data = g.getImageData(0, 0, c.width, c.height).data;
+  pts = [];
+  const step = Math.max(1, Math.round(size / 18));
+  for (let y = 0; y < c.height; y += step) {
+    for (let x = 0; x < c.width; x += step) {
+      if (data[(y * c.width + x) * 4 + 3] > 128) pts.push(x, y);
+    }
+  }
+  pts.width = tw;
+  if (GLYPH_CACHE.size > 400) GLYPH_CACHE.clear();
+  GLYPH_CACHE.set(key, pts);
+  return pts;
+}
+
+class MachineEffect {
+  constructor() {
+    this.tracks = new Map(); // id -> cosa que la máquina ve (o vio hace poco)
+    this.parts = [];
+  }
+  labelOf(tr, p) {
+    return p.percent !== false ? tr.label + " " + Math.round(tr.conf * 100) + "%" : tr.label;
+  }
+  labelSize(tr, p) {
+    // Segura = grande; dudosa = chica.
+    return Math.max(6, Math.round(p.labelSize * (0.5 + 0.8 * tr.conf)));
+  }
+  colorFor(tr, p, env) {
+    if (p.colorMode === "object" && tr.color) {
+      // El color real de la cosa, pero con luz suficiente para verse proyectado.
+      const c = hexToRgb(tr.color);
+      const mx = Math.max(c.r, c.g, c.b, 1);
+      const k = Math.max(1, 230 / mx);
+      return { r: Math.min(255, Math.round(c.r * k)), g: Math.min(255, Math.round(c.g * k)), b: Math.min(255, Math.round(c.b * k)) };
+    }
+    if (p.colorMode === "confidence") return mixRgb(climateRgb(p.color2, env), climateRgb(p.color, env), tr.conf);
+    return climateRgb(p.color, env);
+  }
+  emit(x, y, vx, vy, rgb, p) {
+    if (this.parts.length > 5000) return;
+    const life = p.life * (0.6 + Math.random() * 0.8);
+    this.parts.push({ x, y, vx, vy, life, max: life, size: p.particleSize * (0.5 + Math.random()), c: rgb });
+  }
+  // Partículas que salen de las letras de la palabra.
+  emitFromWord(tr, p, env, n, burst) {
+    const size = this.labelSize(tr, p);
+    const pts = glyphPoints(this.labelOf(tr, p), size);
+    if (!pts.length) return;
+    const base = this.labelPos(tr, size);
+    const rgb = this.colorFor(tr, p, env);
+    const sp = 40 * p.speed;
+    for (let i = 0; i < n; i++) {
+      const k = (Math.floor(Math.random() * (pts.length / 2))) * 2;
+      const a = Math.random() * Math.PI * 2;
+      const v = burst ? sp * (0.5 + Math.random() * 1.5) : sp * 0.4 * Math.random();
+      this.emit(base.x + pts[k], base.y + pts[k + 1], Math.cos(a) * v, Math.sin(a) * v - (burst ? 0 : sp * 0.3), rgb, p);
+    }
+  }
+  labelPos(tr, size) {
+    const y = tr.y - size * 1.25 < 0 ? tr.y + 4 : tr.y - size * 1.25;
+    return { x: tr.x, y };
+  }
+  update(dt, t, w, h, p, env) {
+    const seen = new Set();
+    for (const o of (env && env.objects) || []) {
+      if (o.conf < p.minConf) continue;
+      seen.add(o.id);
+      let tr = this.tracks.get(o.id);
+      if (!tr) { tr = { id: o.id, fade: 0, acc: 0, wacc: 0 }; this.tracks.set(o.id, tr); }
+      Object.assign(tr, { label: o.label, conf: o.conf, x: o.x, y: o.y, w: o.w, h: o.h, color: o.color, alive: true });
+    }
+    const au = musicOf(env);
+    const boost = musicSpeed(env, 1.5) * (au && au.beat ? 1 + au.m : 1);
+    const wind = windOf(env);
+    for (const tr of Array.from(this.tracks.values())) {
+      if (!seen.has(tr.id)) {
+        // La máquina dejó de verla: la palabra se deshace.
+        if (tr.alive) { tr.alive = false; this.emitFromWord(tr, p, env, Math.round(40 + p.wordParticles * 0.8), true); }
+        tr.fade -= dt * 2.5;
+        if (tr.fade <= 0) this.tracks.delete(tr.id);
+        continue;
+      }
+      tr.fade = Math.min(1, tr.fade + dt * 3);
+      // Partículas que salen de la cosa: más cuanto más segura está la máquina.
+      tr.acc += dt * p.particles * (0.3 + 0.7 * tr.conf) * boost;
+      const rgb = this.colorFor(tr, p, env);
+      const cx = tr.x + tr.w / 2, cy = tr.y + tr.h / 2;
+      const sp = 50 * p.speed;
+      while (tr.acc >= 1) {
+        tr.acc -= 1;
+        const x = tr.x + Math.random() * tr.w, y = tr.y + Math.random() * tr.h;
+        const dx = x - cx, dy = y - cy, d = Math.hypot(dx, dy) || 1;
+        const v = sp * (0.3 + Math.random());
+        this.emit(x, y, (dx / d) * v, (dy / d) * v, rgb, p);
+      }
+      tr.wacc += dt * p.wordParticles * boost;
+      const nw = Math.floor(tr.wacc);
+      if (nw > 0) { tr.wacc -= nw; this.emitFromWord(tr, p, env, nw, false); }
+    }
+    // Mover partículas (viento, atracción a la mano, frenado suave).
+    const k = dt * 60;
+    for (const q of this.parts) {
+      q.life -= dt;
+      q.vx += wind.x * 30 * dt;
+      q.vy += wind.y * 30 * dt - 6 * dt; // suben un poco, como vapor
+      const pull = pullToward(env, q.x, q.y);
+      if (pull) { q.vx += pull.ux * pull.force * 40 * dt * k; q.vy += pull.uy * pull.force * 40 * dt * k; }
+      q.vx *= 1 - 0.8 * dt; q.vy *= 1 - 0.8 * dt;
+      q.x += q.vx * dt; q.y += q.vy * dt;
+    }
+    this.parts = this.parts.filter((q) => q.life > 0);
+  }
+  draw(ctx, w, h, p, env) {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (const q of this.parts) {
+      const a = Math.max(0, q.life / q.max);
+      ctx.fillStyle = rgbToCss(q.c, a * 0.9);
+      const s = q.size * (0.4 + 0.6 * a);
+      ctx.fillRect(q.x - s / 2, q.y - s / 2, s, s);
+    }
+    ctx.globalCompositeOperation = "source-over";
+    const doubtRgb = climateRgb(p.color2, env), sureRgb = climateRgb(p.color, env);
+    for (const tr of this.tracks.values()) {
+      if (!tr.alive) continue;
+      const conf = tr.conf;
+      const a = tr.fade * (0.18 + 0.82 * conf);
+      const rgb = mixRgb(doubtRgb, sureRgb, conf);
+      // Cuando duda, tiembla.
+      const shake = p.doubt * Math.pow(1 - conf, 1.5) * 12;
+      const jx = (Math.random() - 0.5) * shake, jy = (Math.random() - 0.5) * shake;
+      if (p.boxes !== false) {
+        ctx.strokeStyle = rgbToCss(rgb, a);
+        ctx.lineWidth = 1 + 2.5 * conf;
+        ctx.setLineDash(conf < 0.5 ? [6, 6] : []);
+        const L = Math.min(tr.w, tr.h) * 0.22;
+        const x0 = tr.x + jx, y0 = tr.y + jy, x1 = x0 + tr.w, y1 = y0 + tr.h;
+        ctx.beginPath();
+        ctx.moveTo(x0, y0 + L); ctx.lineTo(x0, y0); ctx.lineTo(x0 + L, y0);
+        ctx.moveTo(x1 - L, y0); ctx.lineTo(x1, y0); ctx.lineTo(x1, y0 + L);
+        ctx.moveTo(x1, y1 - L); ctx.lineTo(x1, y1); ctx.lineTo(x1 - L, y1);
+        ctx.moveTo(x0 + L, y1); ctx.lineTo(x0, y1); ctx.lineTo(x0, y1 - L);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      const size = this.labelSize(tr, p);
+      const pos = this.labelPos(tr, size);
+      ctx.font = "600 " + size + "px 'Segoe UI', Roboto, Arial, sans-serif";
+      ctx.textBaseline = "top";
+      ctx.shadowColor = rgbToCss(rgb, a);
+      ctx.shadowBlur = 6 + 14 * conf;
+      ctx.fillStyle = rgbToCss(rgb, a);
+      ctx.fillText(this.labelOf(tr, p), pos.x + 2 + jx * 1.5, pos.y + 2 + jy * 1.5);
+      ctx.shadowBlur = 0;
+    }
+    ctx.restore();
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Fábrica de efectos por tipo
 // ---------------------------------------------------------------------------
 const EffectFactories = {
@@ -1958,5 +2139,6 @@ const EffectFactories = {
   glitch: () => new GlitchEffect(),
   animations: () => new AnimationsEffect(),
   stripesV: () => new StripesEffect(true),
-  stripesH: () => new StripesEffect(false)
+  stripesH: () => new StripesEffect(false),
+  machine: () => new MachineEffect()
 };

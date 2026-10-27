@@ -37,6 +37,8 @@ app.get("/healthz", (req, res) => res.type("text").send("ok")); // chequeo de Re
 auth.mount(app); // contraseña del panel (sólo si está PANEL_PASSWORD)
 app.use(express.static(path.join(__dirname, "public")));
 // MediaPipe se sirve desde node_modules para no depender de un CDN.
+// ONNX Runtime Web: corre YOLO en el navegador.
+app.use("/ort", express.static(path.join(__dirname, "node_modules", "onnxruntime-web", "dist")));
 app.use("/mediapipe", express.static(path.join(__dirname, "node_modules", "@mediapipe", "tasks-vision")));
 
 // ---------------------------------------------------------------------------
@@ -517,6 +519,11 @@ io.on("connection", (socket) => {
   // Posición de las manos (normalizada 0..1). Sólo se reenvía, no se guarda.
   socket.on("hands", (payload) => {
     socket.broadcast.volatile.emit("hands", payload);
+  });
+
+  // Lo que ve la máquina (YOLO): objetos detectados por la cámara del panel.
+  socket.on("objects", (payload) => {
+    socket.broadcast.volatile.emit("objects", payload);
   });
 
   // --- Presets ---

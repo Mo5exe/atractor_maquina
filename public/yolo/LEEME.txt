@@ -1,0 +1,3 @@
+yolox_nano.onnx — YOLOX-nano, de Megvii (https://github.com/Megvii-BaseDetection/YOLOX)
+Licencia Apache 2.0 (https://www.apache.org/licenses/LICENSE-2.0).
+Detecta las 80 clases del dataset COCO. Se usa en la capa "Lo que ve la máquina".
