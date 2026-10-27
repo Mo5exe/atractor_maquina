@@ -2031,7 +2031,7 @@ class MachineEffect {
       if (o.conf < p.minConf) continue;
       seen.add(o.id);
       let tr = this.tracks.get(o.id);
-      if (!tr) { tr = { id: o.id, fade: 0, acc: 0, wacc: 0 }; this.tracks.set(o.id, tr); }
+      if (!tr) { tr = { id: o.id, fade: 0, acc: 0 }; this.tracks.set(o.id, tr); }
       Object.assign(tr, { label: o.label, conf: o.conf, x: o.x, y: o.y, w: o.w, h: o.h, color: o.color, alive: true });
     }
     const au = musicOf(env);
@@ -2040,7 +2040,7 @@ class MachineEffect {
     for (const tr of Array.from(this.tracks.values())) {
       if (!seen.has(tr.id)) {
         // La máquina dejó de verla: la palabra se deshace.
-        if (tr.alive) { tr.alive = false; this.emitFromWord(tr, p, env, Math.round(40 + p.wordParticles * 0.8), true); }
+        if (tr.alive) { tr.alive = false; if (p.dissolve) this.emitFromWord(tr, p, env, 80, true); }
         tr.fade -= dt * 2.5;
         if (tr.fade <= 0) this.tracks.delete(tr.id);
         continue;
@@ -2058,9 +2058,6 @@ class MachineEffect {
         const v = sp * (0.3 + Math.random());
         this.emit(x, y, (dx / d) * v, (dy / d) * v, rgb, p);
       }
-      tr.wacc += dt * p.wordParticles * boost;
-      const nw = Math.floor(tr.wacc);
-      if (nw > 0) { tr.wacc -= nw; this.emitFromWord(tr, p, env, nw, false); }
     }
     // Mover partículas (viento, atracción a la mano, frenado suave).
     const k = dt * 60;

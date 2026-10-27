@@ -3,8 +3,8 @@
 Versión de Atractor Clima con **YOLO**: la cámara no sólo sigue la mano, también reconoce
 las cosas que hay en la sala (personas, plantas, sillas, tazas, celulares…) y las nombra
 con su **confianza** ("planta 54%"). Cuanto más segura está la máquina, más grande y
-sólida es la palabra; cuando duda, queda transparente y tiembla. De las cosas y de las
-letras salen partículas, y cuando la máquina deja de ver algo, su palabra se deshace.
+sólida es la palabra; cuando duda, queda transparente y tiembla. De las cosas pueden salir
+partículas, y cuando la máquina deja de ver algo, su palabra se puede deshacer.
 
 Todo lo de Atractor Clima sigue igual (clima, palabras, música, multitouch, multijugador).
 
@@ -18,7 +18,9 @@ Todo lo de Atractor Clima sigue igual (clima, palabras, música, multitouch, mul
    - **Confianza mínima**: debajo de ese número la máquina "no ve" nada.
    - **Recuadros** y **porcentaje**: mostrarlos o no.
    - **Temblor cuando duda**, **tamaño de la palabra**.
-   - **Partículas que salen de las cosas** y **de la palabra**, tamaño, velocidad y vida.
+   - **Partículas que salen de las cosas** (empieza en 0: subilo para verlas), tamaño,
+     velocidad y vida.
+   - **Cuando deja de ver algo, la palabra se deshace en partículas** (apagado al inicio).
    - **Color de las partículas**: el color real de la cosa (lo que ve la cámara), un solo
      color, o según la confianza (color de la duda → color de la seguridad).
 4. En la tarjeta de la cámara: **"Las cosas que ve la máquina también atraen"**: cada
